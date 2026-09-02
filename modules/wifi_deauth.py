@@ -12,10 +12,15 @@ active_wireless_network = []
 
 
 def check_for_essid(essid, lst):
+    # airodump-ng's CSV has an AP section followed by a station/client section with
+    # fewer columns — rows from that second section come back with ESSID as None.
+    # Treat those (and blank ESSIDs) as not a valid access point row.
+    if not essid:
+        return False
     if len(lst) == 0:
         return True
     for item in lst:
-        if essid in item["ESSID"]:
+        if essid in (item["ESSID"] or ""):
             return False
     return True
 
