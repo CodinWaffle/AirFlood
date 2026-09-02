@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+
+# leftover capture files from airodump-ng runs
+*.csv
+backup_files/

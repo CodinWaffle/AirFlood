@@ -1,0 +1,94 @@
+"""Startup environment check: Linux-only, and makes sure the required
+command-line tools (aircrack-ng suite + bluez utilities) are installed
+before the AirFlood menu loads."""
+
+import platform
+import shutil
+import subprocess
+
+from utils import banner
+
+# tool name -> apt package that provides it (Debian-based distros: Kali, Parrot, Ubuntu, ...)
+REQUIRED_TOOLS = {
+    "airmon-ng": "aircrack-ng",
+    "airodump-ng": "aircrack-ng",
+    "aireplay-ng": "aircrack-ng",
+    "hciconfig": "bluez",
+    "hcitool": "bluez",
+    "l2ping": "bluez",
+}
+
+
+def detect_distro():
+    try:
+        with open("/etc/os-release") as f:
+            data = {}
+            for line in f:
+                if "=" in line:
+                    key, _, value = line.strip().partition("=")
+                    data[key] = value.strip('"')
+        return data.get("PRETTY_NAME", "unknown Linux distro")
+    except FileNotFoundError:
+        return "unknown Linux distro"
+
+
+def check_platform():
+    if platform.system() != "Linux":
+        banner.error(f"AirFlood only runs on Linux — detected: {platform.system()}.")
+        banner.error("monitor-mode wifi and raw bluetooth sockets aren't available on this OS.")
+        banner.info("run this on Kali Linux or Parrot OS (or another Debian-based Linux).")
+        raise SystemExit(1)
+
+    distro = detect_distro()
+    banner.ok(f"platform ok: linux — {distro}")
+    if "kali" not in distro.lower() and "parrot" not in distro.lower():
+        banner.warn("AirFlood is built & tested on Kali Linux and Parrot OS.")
+        banner.warn(f"'{distro}' may still work if it's Debian-based, but isn't officially tested.")
+
+
+def missing_tools():
+    return {tool: pkg for tool, pkg in REQUIRED_TOOLS.items() if shutil.which(tool) is None}
+
+
+def install_packages(packages):
+    if shutil.which("apt-get") is None:
+        banner.error("apt-get not found — automatic install only supports Debian-based distros.")
+        banner.info("install manually with your distro's package manager: " + ", ".join(packages))
+        return False
+
+    banner.info("installing: " + ", ".join(packages))
+    subprocess.run(["sudo", "apt-get", "update"], check=False)
+    result = subprocess.run(["sudo", "apt-get", "install", "-y", *packages])
+    return result.returncode == 0
+
+
+def ensure_dependencies():
+    banner.banner()
+    banner.section("environment check")
+
+    check_platform()
+
+    missing = missing_tools()
+    if not missing:
+        banner.ok("all required tools found (aircrack-ng, bluez)")
+        return
+
+    packages = sorted(set(missing.values()))
+    banner.warn("missing tools: " + ", ".join(sorted(missing)))
+    banner.info("provided by package(s): " + ", ".join(packages))
+
+    choice = banner.prompt("install missing dependencies now? [Y/n]")
+    if choice.strip().lower() not in ("", "y", "yes"):
+        banner.error("AirFlood needs these tools to run. install them and try again.")
+        raise SystemExit(1)
+
+    if not install_packages(packages):
+        banner.error("automatic install failed — install manually: sudo apt install " + " ".join(packages))
+        raise SystemExit(1)
+
+    still_missing = missing_tools()
+    if still_missing:
+        banner.error("still missing after install: " + ", ".join(still_missing))
+        raise SystemExit(1)
+
+    banner.ok("dependencies installed")
