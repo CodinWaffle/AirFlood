@@ -28,7 +28,7 @@ def check_for_essid(essid, lst):
 def backup_stray_csv_files():
     if not any(".csv" in f for f in os.listdir()):
         return
-    banner.warn("found leftover .csv files here, moving them to backup_files/")
+    banner.info("archiving scan .csv files to backup_files/")
     directory = os.getcwd()
     try:
         os.mkdir(directory + "/backup_files")
@@ -156,11 +156,16 @@ def launch_attack(interface, target):
 
 def run():
     backup_stray_csv_files()
-    interface = select_interface()
-    prepare_monitor_mode(interface)
-    scan_networks(interface)
-    target = select_target()
-    launch_attack(interface, target)
+    try:
+        interface = select_interface()
+        prepare_monitor_mode(interface)
+        scan_networks(interface)
+        target = select_target()
+        launch_attack(interface, target)
+    finally:
+        # always sweep up this run's airodump-ng .csv files, whether the attack
+        # finished, was interrupted, or errored out
+        backup_stray_csv_files()
 
 
 if __name__ == "__main__":
