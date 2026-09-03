@@ -46,17 +46,17 @@ I'm building and testing this one real run at a time on an actual Kali box, and 
 
 Don't rely on this for a real engagement yet.
 
+**This only targets Kali Linux and Parrot OS.** Both are built specifically for pentesting — they ship `aircrack-ng` and `bluez` out of the box, come with wireless drivers patched for monitor mode and injection, and are what the WiFi and Bluetooth scripts are actually written and tested against (the exact `airmon-ng`/`airodump-ng`/`aireplay-ng` and `hciconfig`/`hcitool`/`l2ping` behavior they expect, plus an `apt`-based dependency installer). Other distros aren't a supported target — driver behavior, injection support, and even package availability can differ enough that things just won't work the same way.
+
 | Platform | Status |
 |---|---|
-| Kali Linux | actively tested — this is where fixes get verified |
-| Parrot OS | same Debian base and tooling, should work, not actually tried yet |
-| Other Debian-based (Ubuntu, Debian) | probably fine, untested |
-| Fedora / Arch / non-Debian Linux | works once `aircrack-ng` and `bluez` are installed by hand — the built-in installer only knows `apt` |
-| Windows / macOS | no — monitor mode and raw Bluetooth sockets don't work the same way |
+| Kali Linux | supported, actively tested — this is where fixes get verified |
+| Parrot OS | supported, same Debian base, tooling, and command behavior as Kali, not actually tried yet |
+| Everything else | not supported |
 
 ## Requirements
 
-- Linux, run as root
+- Kali Linux or Parrot OS, run as root — see [Where this is at](#where-this-is-at) for why
 - Python 3
 - A wireless adapter that supports **both** monitor mode and packet injection. A lot of built-in laptop chips do the first and not the second — check with `aireplay-ng --test <interface>` before you count on one. An external USB adapter with a known-compatible chipset (Atheros, Ralink) is the safer bet.
 - A Bluetooth adapter

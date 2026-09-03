@@ -45,7 +45,6 @@ LOGO_LINES = [
 LOGO_GRADIENT = [C.NAVY, C.BLUE, C.SKY, C.CYAN, C.ICE, C.ICE]
 
 TAGLINE = "wireless deauthentication toolkit"
-COMPAT_NOTE = "linux only · actively tested on kali linux, trial-and-error stage"
 GITHUB_LINK = "github.com/CodinWaffle"
 LINKEDIN_LINK = "linkedin.com/in/jose-martin-r-imperial-53a2b429a"
 
@@ -96,7 +95,6 @@ def banner():
     for line, shade in zip(LOGO_LINES, LOGO_GRADIENT):
         print(f"{shade}{C.BOLD}{line.center(w)}{C.RESET}")
     print(f"{C.MUTED}{TAGLINE.center(w)}{C.RESET}")
-    print(f"{C.DIM}{C.MUTED}{COMPAT_NOTE.center(w)}{C.RESET}")
     print()
     box(
         [

@@ -138,17 +138,6 @@ def scan_attack():
         banner.error("target address is missing")
         raise banner.BackToMenu()
 
-    banner.box(
-        [
-            f"{banner.C.WHITE}packet size{banner.C.RESET} — bytes per l2ping packet, 1 to 600",
-            "  larger packets = more load; 200-600 is typical",
-            f"{banner.C.WHITE}threads{banner.C.RESET} — concurrent l2ping streams",
-            f"  {banner.C.MUTED}not wired into the flood yet, any number works for now{banner.C.RESET}",
-        ],
-        title="attack parameters guide",
-        accent=ACCENT,
-    )
-
     try:
         packet_size = int(banner.prompt("packet size (max: 600)", accent=ACCENT))
         thread_size = int(banner.prompt("threads count", accent=ACCENT))
