@@ -61,10 +61,15 @@ def scan_attack():
         else:
             banner.warn("invalid choice, try again")
 
+    # hcitool's inquiry length is in 1.28s units; the default (8 -> ~10s) often
+    # isn't long enough to catch every nearby device, so give it more time
+    scan_length = 16  # ~20s
     banner.module_banner("bluetooth")
     banner.section("scanning for devices", accent=ACCENT)
+    banner.info(f"scanning for ~{round(scan_length * 1.28)}s, please wait...")
     bluetooth_scan = subprocess.check_output(
-        f"hcitool -i {bluetooth_interface} scan", shell=True, stderr=subprocess.STDOUT, text=True
+        f"hcitool -i {bluetooth_interface} scan --length={scan_length}",
+        shell=True, stderr=subprocess.STDOUT, text=True
     )
     lines = bluetooth_scan.splitlines()
     del lines[0]
