@@ -56,6 +56,10 @@ def select_interface():
     banner.module_banner("wifi")
     banner.section("select a wireless interface", accent=banner.C.CYAN)
 
+    banner.warn("your adapter must support BOTH monitor mode and packet injection.")
+    banner.info("many built-in laptop wifi chips support monitor mode but not injection —")
+    banner.info("check with: aireplay-ng --test <interface>")
+
     interfaces = detect_wireless_interfaces()
     if len(interfaces) == 0:
         banner.error("no wireless adapter found, please connect one and try again")
@@ -79,6 +83,20 @@ def select_interface():
             banner.warn("invalid selection, try again")
 
 
+def find_monitor_interface(fallback):
+    # modern airmon-ng often does NOT rename the interface to "<iface>mon"
+    # anymore (that was the older mac80211 convention) — it may just flip
+    # the same interface into monitor mode in place. Re-query iwconfig for
+    # whichever interface actually reports Mode:Monitor instead of assuming
+    # a naming convention that may not hold on this kernel/driver.
+    result = subprocess.run(["iwconfig"], capture_output=True, text=True)
+    for block in result.stdout.split("\n\n"):
+        block = block.strip()
+        if "Mode:Monitor" in block:
+            return block.splitlines()[0].split()[0]
+    return fallback + "mon"
+
+
 def prepare_monitor_mode(interface):
     banner.module_banner("wifi")
     banner.section("preparing monitor mode", accent=banner.C.CYAN)
@@ -86,8 +104,11 @@ def prepare_monitor_mode(interface):
     subprocess.run(["sudo", "airmon-ng", "check", "kill"])
     banner.info(f"enabling monitor mode on {interface}...")
     subprocess.run(["sudo", "airmon-ng", "start", interface])
-    banner.ok("monitor mode ready")
     time.sleep(1)
+
+    mon_interface = find_monitor_interface(interface)
+    banner.ok(f"monitor mode ready on {mon_interface}")
+    return mon_interface
 
 
 SCAN_DURATION = 30  # seconds
@@ -95,19 +116,23 @@ SCAN_DURATION = 30  # seconds
 
 def _render_scan_screen(elapsed, tick):
     banner.module_banner("wifi")
-    banner.section("scanning for access points", accent=banner.C.CYAN)
 
-    # the bar itself has to shrink on a narrow terminal, and the surrounding
-    # stats go on their own line — otherwise this row is a fixed ~50+ chars
-    # regardless of how narrow the real terminal is, and it wraps mid-word
-    bar_width = max(10, min(32, banner.width() - 20))
+    # the bar shrinks to fit whatever's left inside the box after borders/
+    # padding, so nothing can ever be wider than the box itself
+    bar_width = max(10, min(32, banner.width() - 24))
     spin = banner.spinner_frame(tick, accent=banner.C.CYAN)
     bar = banner.progress_bar(elapsed, SCAN_DURATION, bar_width=bar_width, accent=banner.C.CYAN)
     remaining = max(0, round(SCAN_DURATION - elapsed))
 
-    print(f"  {spin}  {bar}")
-    print(f"  {remaining:>2}s left  ·  {len(active_wireless_network)} access point(s) found")
-    banner.info("press ctrl+c to stop early")
+    banner.box(
+        [
+            f"{spin}  {bar}",
+            f"{remaining:>2}s left  ·  {len(active_wireless_network)} access point(s) found",
+            f"{banner.C.MUTED}press ctrl+c to stop early{banner.C.RESET}",
+        ],
+        title="scanning for access points",
+        accent=banner.C.CYAN,
+    )
 
 
 def _render_results_screen():
@@ -126,13 +151,15 @@ def scan_networks(interface):
 
     scan_proc = subprocess.Popen(
         ["sudo", "airodump-ng", "-w", "file", "--write-interval", "1", "--output-format", "csv",
-         interface + "mon"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+         interface],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
     )
 
     start = time.monotonic()
     tick = 0
+    early_exit_output = None
 
     try:
         while True:
@@ -159,7 +186,7 @@ def scan_networks(interface):
             # child on its own — if it's already gone, stop here too instead
             # of waiting out the rest of the timer for nothing
             if scan_proc.poll() is not None:
-                banner.warn("scan process stopped early, showing results so far")
+                early_exit_output = scan_proc.stdout.read().strip() if scan_proc.stdout else ""
                 break
 
             time.sleep(0.4)
@@ -172,6 +199,16 @@ def scan_networks(interface):
     _render_results_screen()
     banner.ok(f"scan complete, found {len(active_wireless_network)} network(s)")
 
+    # print this AFTER the results screen's clear() so it doesn't get wiped
+    # before the user has a chance to read why airodump-ng stopped early
+    if early_exit_output is not None:
+        banner.warn("airodump-ng exited before the scan timer finished")
+        if early_exit_output:
+            for line in early_exit_output.splitlines()[-5:]:
+                banner.error(line)
+        else:
+            banner.info("(it exited with no output — likely killed by a signal, e.g. an early ctrl+c)")
+
 
 def select_target():
     while True:
@@ -182,12 +219,11 @@ def select_target():
             banner.warn("invalid selection, try again")
 
 
-def launch_attack(interface, target):
+def launch_attack(mon_interface, target):
     banner.module_banner("wifi")
     banner.section("launching deauthentication attack", accent=banner.C.CYAN)
     channel = target["channel"].strip()
     bssid = target["BSSID"]
-    mon_interface = interface + "mon"
 
     print(f"  target essid  : {target['ESSID']}")
     print(f"  target bssid  : {bssid}")
@@ -205,10 +241,10 @@ def run():
     backup_stray_csv_files()
     try:
         interface = select_interface()
-        prepare_monitor_mode(interface)
-        scan_networks(interface)
+        mon_interface = prepare_monitor_mode(interface)
+        scan_networks(mon_interface)
         target = select_target()
-        launch_attack(interface, target)
+        launch_attack(mon_interface, target)
     finally:
         # always sweep up this run's airodump-ng .csv files, whether the attack
         # finished, was interrupted, or errored out

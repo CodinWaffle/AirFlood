@@ -1,7 +1,10 @@
 """Terminal theming for AirFlood: colors, banner, and menu rendering."""
 
 import os
+import re
 import sys
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 class BackToMenu(Exception):
@@ -173,6 +176,50 @@ def progress_bar(elapsed, total, bar_width=32, accent=None):
     bar = "█" * filled + "░" * (bar_width - filled)
     pct = int(ratio * 100)
     return f"{accent}{bar}{C.RESET} {C.MUTED}{pct:3d}%{C.RESET}"
+
+
+def visible_len(s):
+    return len(_ANSI_RE.sub("", s))
+
+
+def _truncate_visible(s, n):
+    """Truncate s to at most n visible characters without cutting an ANSI code in half."""
+    out = []
+    seen = 0
+    i = 0
+    while i < len(s) and seen < n:
+        m = _ANSI_RE.match(s, i)
+        if m:
+            out.append(m.group())
+            i = m.end()
+        else:
+            out.append(s[i])
+            seen += 1
+            i += 1
+    return "".join(out) + C.RESET
+
+
+def box(lines, title=None, accent=None, w=None):
+    """Print a bordered box around a list of (possibly ANSI-colored) lines.
+    Every line is padded or truncated to fit exactly inside the border, so
+    content can never spill outside it regardless of terminal-width quirks."""
+    accent = accent or C.ACCENT
+    w = w or width()
+    inner = w - 4  # "│ " + content + " │"
+
+    top = f"╭─ {title} " if title else "╭"
+    top += "─" * max(0, w - visible_len(top) - 1) + "╮"
+    print(f"{accent}{top}{C.RESET}")
+
+    for line in lines:
+        vlen = visible_len(line)
+        if vlen > inner:
+            line = _truncate_visible(line, inner)
+            vlen = inner
+        pad = inner - vlen
+        print(f"{accent}│{C.RESET} {line}{' ' * pad} {accent}│{C.RESET}")
+
+    print(f"{accent}╰{'─' * (w - 2)}╯{C.RESET}")
 
 
 if __name__ == "__main__":

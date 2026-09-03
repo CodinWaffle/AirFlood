@@ -32,7 +32,7 @@ What that means in practice:
 - Linux (see Compatibility above)
 - Root — AirFlood refuses to start without it (see [Environment check](#environment-check))
 - Python 3
-- A wireless network adapter that supports monitor mode (for the WiFi module)
+- A wireless network adapter that supports **both** monitor mode **and** packet injection (for the WiFi module) — many built-in laptop wifi chips support monitor mode but not injection, which the deauth attack needs. Check a given adapter/driver with `aireplay-ng --test <interface>` before relying on it. A well-known-compatible external USB adapter (e.g. one using an Atheros or Ralink chipset supported by `aircrack-ng`) is the safest bet.
 - A Bluetooth adapter (for the Bluetooth module)
 - [`aircrack-ng`](https://www.aircrack-ng.org/) suite — provides `airmon-ng`, `airodump-ng`, `aireplay-ng`
 - `bluez` — provides `hciconfig`, `hcitool`, `l2ping`

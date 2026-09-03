@@ -59,13 +59,15 @@ def scan_bluetooth_devices(interface, scan_length=16):
         while proc.poll() is None:
             elapsed = time.monotonic() - start
             banner.module_banner("bluetooth")
-            banner.section("scanning for devices", accent=ACCENT)
-            bar_width = max(10, min(32, banner.width() - 20))
+            bar_width = max(10, min(32, banner.width() - 24))
             spin = banner.spinner_frame(tick, accent=ACCENT)
             bar = banner.progress_bar(elapsed, approx_duration, bar_width=bar_width, accent=ACCENT)
             remaining = max(0, round(approx_duration - elapsed))
-            print(f"  {spin}  {bar}")
-            print(f"  ~{remaining:>2}s left")
+            banner.box(
+                [f"{spin}  {bar}", f"~{remaining:>2}s left"],
+                title="scanning for devices",
+                accent=ACCENT,
+            )
             tick += 1
             time.sleep(0.3)
     except KeyboardInterrupt:
