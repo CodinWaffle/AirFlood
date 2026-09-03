@@ -1,45 +1,68 @@
 # AirFlood
 
-A terminal-based WiFi & Bluetooth deauthentication toolkit with a themed menu system.
+A terminal WiFi and Bluetooth deauthentication toolkit for Linux, built for authorized security testing.
 
-## ⚠️ Legal & Ethical Use
+![AirFlood running in a terminal](docs/screenshot.png)
 
-AirFlood is intended **only** for authorized security testing — your own network/devices, or an engagement you have explicit written permission for (e.g. a pentest scope, a CTF, a lab environment). Deauthenticating wireless clients or Bluetooth devices you don't own or don't have permission to test is illegal in most jurisdictions and against the Terms of Service of virtually every network. You are solely responsible for how you use this tool.
+## What it does
 
-## Status: trial-and-error testing, not a finished tool
+Two modules, one menu:
 
-AirFlood is being actively built and debugged right now, one real run at a time — this is **not** a stable release. Expect things to break. So far it's only been exercised on a single Kali Linux machine, catching issues as they show up (crashes, commands with wrong arguments, terminal-rendering glitches, UX rough edges) and fixing them one at a time as they're hit. There will be more.
+- **WiFi Deauth** — puts an adapter into monitor mode, scans for nearby access points for 30 seconds, then sends deauth frames at whichever one you pick, via `aireplay-ng`.
+- **Bluetooth Deauth** — scans for nearby Bluetooth devices and floods a chosen target with `l2ping`.
 
-What that means in practice:
+```mermaid
+flowchart TD
+    Start(["sudo python3 main.py"]) --> Check{"environment check:<br/>linux, root, dependencies"}
+    Check -->|fails| Exit1(["exit with fix instructions"])
+    Check -->|ok| Menu["main menu"]
 
-- Behavior can change between commits as bugs get found and fixed.
-- Not every code path has actually been run against real hardware yet — some are still theoretical until tested.
-- If something breaks, that's expected at this stage, not a sign you did something wrong. Note what happened (a screenshot of the terminal is ideal) and report it.
-- Nothing here should be relied on for a real engagement yet — treat it as a work in progress you're helping shake out, not a finished tool.
+    Menu --> Wifi["WiFi Deauth"]
+    Menu --> BT["Bluetooth Deauth"]
+    Menu --> Exit2(["exit"])
 
-## Compatibility
+    Wifi --> W1["select wireless interface"]
+    W1 --> W2["enable monitor mode"]
+    W2 --> W3["30s scan for access points"]
+    W3 --> W4["pick a target"]
+    W4 --> W5["deauth attack"]
+    W5 --> Menu
+
+    BT --> B1["select bluetooth interface"]
+    B1 --> B2["scan for devices"]
+    B2 --> B3["pick a target"]
+    B3 --> B4["set packet size / threads"]
+    B4 --> B5["l2ping flood"]
+    B5 --> Menu
+```
+
+## Before you use this
+
+Only point AirFlood at networks and devices you own, or have explicit written permission to test — a pentest scope, a CTF, your own lab. Deauthing someone else's WiFi or Bluetooth without permission is illegal in most places and you're on your own if you do it.
+
+## Where this is at
+
+I'm building and testing this one real run at a time on an actual Kali box, and it's not finished. Bugs get found and fixed as they come up — bad `airmon-ng` arguments, CSV parsing that choked on real `airodump-ng` output, terminal-width wrapping, that kind of thing. If something breaks on your end, that's the expected state right now, not something you did wrong — tell me what happened (module, step, what you expected vs. what you got, a screenshot if you can grab one) and it gets fixed.
+
+Don't rely on this for a real engagement yet.
 
 | Platform | Status |
 |---|---|
-| Kali Linux | 🟡 Actively being tested — the only platform run so far, still finding and fixing issues |
-| Parrot OS | ⚪ Not yet tried |
-| Other Debian-based (Ubuntu, Debian) | ⚪ Not yet tried — dependencies are available via `apt`, but the tool hasn't been run there |
-| Non-Debian Linux (Fedora, Arch, ...) | ⚪ Core scripts should run once dependencies are installed manually, but the built-in auto-installer only supports `apt` |
-| Windows / macOS | ❌ Not supported (monitor mode / raw Bluetooth sockets aren't available the same way) |
+| Kali Linux | actively tested — this is where fixes get verified |
+| Parrot OS | same Debian base and tooling, should work, not actually tried yet |
+| Other Debian-based (Ubuntu, Debian) | probably fine, untested |
+| Fedora / Arch / non-Debian Linux | works once `aircrack-ng` and `bluez` are installed by hand — the built-in installer only knows `apt` |
+| Windows / macOS | no — monitor mode and raw Bluetooth sockets don't work the same way |
 
 ## Requirements
 
-- Linux (see Compatibility above)
-- Root — AirFlood refuses to start without it (see [Environment check](#environment-check))
+- Linux, run as root
 - Python 3
-- A wireless network adapter that supports **both** monitor mode **and** packet injection (for the WiFi module) — many built-in laptop wifi chips support monitor mode but not injection, which the deauth attack needs. Check a given adapter/driver with `aireplay-ng --test <interface>` before relying on it. A well-known-compatible external USB adapter (e.g. one using an Atheros or Ralink chipset supported by `aircrack-ng`) is the safest bet.
-- A Bluetooth adapter (for the Bluetooth module)
-- [`aircrack-ng`](https://www.aircrack-ng.org/) suite — provides `airmon-ng`, `airodump-ng`, `aireplay-ng`
-- `bluez` — provides `hciconfig`, `hcitool`, `l2ping`
+- A wireless adapter that supports **both** monitor mode and packet injection. A lot of built-in laptop chips do the first and not the second — check with `aireplay-ng --test <interface>` before you count on one. An external USB adapter with a known-compatible chipset (Atheros, Ralink) is the safer bet.
+- A Bluetooth adapter
+- [`aircrack-ng`](https://www.aircrack-ng.org/) (`airmon-ng`, `airodump-ng`, `aireplay-ng`) and `bluez` (`hciconfig`, `hcitool`, `l2ping`) — AirFlood checks for both on startup and offers to install whatever's missing via `apt`.
 
-You don't need to install the tool dependencies by hand — AirFlood checks for them on startup and offers to install anything missing via `apt`.
-
-## Getting Started
+## Running it
 
 ```bash
 git clone https://github.com/CodinWaffle/AirFlood.git
@@ -47,49 +70,35 @@ cd AirFlood
 sudo python3 main.py
 ```
 
-It has to be run with `sudo` — `airmon-ng`, `airodump-ng`, `aireplay-ng`, `hciconfig`, and `l2ping` all need raw device access, and AirFlood checks for root before showing the menu rather than failing partway through later.
+It has to run as root — monitor mode, interface control, and raw sockets all need it, and AirFlood checks for that up front instead of failing halfway through a scan later.
 
-On first run, AirFlood also checks your platform and dependencies before showing the main menu. If required tools are missing, it will ask before installing anything — nothing is installed silently.
-
-## Usage
-
-Run `main.py` and pick a module from the main menu:
-
-- **WiFi Deauth** — select a wireless interface → enable monitor mode → 30-second animated scan for nearby access points → pick a target → launch the deauth attack.
-- **Bluetooth Deauth** — select a Bluetooth interface (brought up automatically if it's down) → animated scan for nearby devices → pick a target → set packet size / thread count → launch the flood.
-
-Selecting "Back" / "Exit" anywhere returns you to the AirFlood main menu rather than closing the program. `Ctrl+C` aborts the current step early.
-
-Each module can also be run standalone for testing:
+Each module also runs standalone if you just want to poke at one:
 
 ```bash
 sudo python3 modules/wifi_deauth.py
 sudo python3 modules/bluetooth_deauth.py
 ```
 
-## Environment Check
+`Back` / `Exit` from anywhere returns you to the main menu rather than killing the process. `Ctrl+C` aborts whatever step is running.
 
-Before the main menu loads, AirFlood:
-
-1. Confirms it's running on Linux.
-2. Reads `/etc/os-release` and notes whether you're on Kali/Parrot (a soft warning is shown on anything else — it won't block you, just flags that it's unverified there).
-3. Confirms it's running as root, and refuses to continue otherwise.
-4. Checks for `airmon-ng`, `airodump-ng`, `aireplay-ng`, `hciconfig`, `hcitool`, and `l2ping` on your `PATH`.
-5. If any are missing and `apt-get` is available, it asks for confirmation and then runs `apt-get install` for the missing packages. On non-`apt` systems it tells you what to install manually instead of guessing.
-
-## Project Structure
+## Project layout
 
 ```
 AirFlood/
-├── main.py                     # entry point — dependency check + main menu
+├── main.py                  # entry point: environment check, then main menu
 ├── modules/
-│   ├── wifi_deauth.py          # WiFi interface select → scan → deauth
-│   └── bluetooth_deauth.py     # Bluetooth interface select → scan → flood
+│   ├── wifi_deauth.py       # interface -> monitor mode -> scan -> deauth
+│   └── bluetooth_deauth.py  # interface -> scan -> l2ping flood
 └── utils/
-    ├── banner.py                # theme: colors, banners, menu rendering, animations
-    └── dependencies.py          # platform, root, and dependency checks
+    ├── banner.py             # theme: colors, boxes, banners, animations
+    └── dependencies.py       # platform / root / dependency checks
 ```
 
-## Reporting Issues
+## Author
 
-Since this is still in trial-and-error testing, the most useful thing you can do is report exactly what broke: which module, which step, what you expected vs. what happened, and a screenshot of the terminal if you can grab one. That's how the compatibility table above moves from "not yet tried" to actually verified.
+Jose Martin Imperial
+[github.com/CodinWaffle](https://github.com/CodinWaffle) · [LinkedIn](https://www.linkedin.com/in/jose-martin-r-imperial-53a2b429a/)
+
+---
+
+Found a bug? The module, the step, what you expected vs. what happened, and a screenshot if you have one — that's what actually gets it fixed.

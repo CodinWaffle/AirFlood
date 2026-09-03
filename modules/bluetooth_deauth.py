@@ -35,8 +35,14 @@ def get_bluetooth_interface():
     interfaces = subprocess.check_output(
         "hciconfig | grep -E 'hci[0-9]+:|Bus|UP RUNNING|DOWN'", shell=True, text=True
     )
-    print()
-    print(interfaces)
+    # hciconfig's output uses raw tabs, which expand to inconsistent widths
+    # depending on the terminal's tab stops — normalize to spaces so the
+    # box border stays aligned regardless
+    lines = [line.expandtabs(4) for line in interfaces.splitlines() if line.strip()]
+    if not lines:
+        lines = [f"{banner.C.MUTED}no bluetooth interfaces found{banner.C.RESET}"]
+
+    banner.box(lines, title="available interfaces", accent=ACCENT)
     interface = banner.prompt("interface (e.g. hci0)", accent=ACCENT)
     ensure_interface_up(interface)
     return interface
@@ -131,6 +137,17 @@ def scan_attack():
     if len(target_address) < 1:
         banner.error("target address is missing")
         raise banner.BackToMenu()
+
+    banner.box(
+        [
+            f"{banner.C.WHITE}packet size{banner.C.RESET} — bytes per l2ping packet, 1 to 600",
+            "  larger packets = more load; 200-600 is typical",
+            f"{banner.C.WHITE}threads{banner.C.RESET} — concurrent l2ping streams",
+            f"  {banner.C.MUTED}not wired into the flood yet, any number works for now{banner.C.RESET}",
+        ],
+        title="attack parameters guide",
+        accent=ACCENT,
+    )
 
     try:
         packet_size = int(banner.prompt("packet size (max: 600)", accent=ACCENT))
