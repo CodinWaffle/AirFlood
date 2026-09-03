@@ -65,8 +65,13 @@ def width(default=72):
     # COLUMNS/LINES env vars that shutil.get_terminal_size() would otherwise
     # trust blindly (common after sudo, tmux, or a resized window/pane) — a
     # stale wider value here makes every centered line wrap unpredictably.
+    #
+    # the floor here must stay BELOW any realistic terminal width: a floor
+    # that's higher than a genuinely narrow terminal forces every centered
+    # line wider than the terminal itself, which overflows and wraps mid-word
+    # exactly like the bug this function exists to prevent.
     try:
-        return max(60, min(os.get_terminal_size(sys.__stdout__.fileno()).columns, 100))
+        return max(40, min(os.get_terminal_size(sys.__stdout__.fileno()).columns, 90))
     except OSError:
         return default
 
@@ -74,6 +79,12 @@ def width(default=72):
 def clear():
     # \033[2J clears the visible screen, \033[3J clears scrollback, \033[H homes the cursor
     print("\033[2J\033[3J\033[H", end="", flush=True)
+
+
+def redraw():
+    # lighter than clear(): skips the scrollback wipe (\033[3J), for frequent
+    # animation ticks where re-clearing scrollback every ~0.4s is wasted work
+    print("\033[2J\033[H", end="", flush=True)
 
 
 def hr(char="─", color=C.MUTED):
@@ -91,11 +102,13 @@ def banner():
     hr()
 
 
-def module_banner(module):
-    """Clear the screen and show the sub-banner for a specific module (wifi/bluetooth)."""
+def module_banner(module, full_clear=True):
+    """Show the sub-banner for a specific module (wifi/bluetooth). Pass
+    full_clear=False for frequent animation redraws (spinner/progress bar
+    ticks) to skip the scrollback wipe every frame."""
     theme = MODULE_THEMES[module]
     accent = theme["accent"]
-    clear()
+    clear() if full_clear else redraw()
     w = width()
     print(f"{C.MUTED}{'AIRFLOOD'.center(w)}{C.RESET}")
     print(f"{accent}{C.BOLD}{theme['glyph_line'].center(w)}{C.RESET}")

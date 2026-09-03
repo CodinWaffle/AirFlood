@@ -94,13 +94,19 @@ SCAN_DURATION = 30  # seconds
 
 
 def _render_scan_screen(elapsed, tick):
-    banner.module_banner("wifi")
+    banner.module_banner("wifi", full_clear=(tick == 0))
     banner.section("scanning for access points", accent=banner.C.CYAN)
 
+    # the bar itself has to shrink on a narrow terminal, and the surrounding
+    # stats go on their own line — otherwise this row is a fixed ~50+ chars
+    # regardless of how narrow the real terminal is, and it wraps mid-word
+    bar_width = max(10, min(32, banner.width() - 20))
     spin = banner.spinner_frame(tick, accent=banner.C.CYAN)
-    bar = banner.progress_bar(elapsed, SCAN_DURATION, accent=banner.C.CYAN)
+    bar = banner.progress_bar(elapsed, SCAN_DURATION, bar_width=bar_width, accent=banner.C.CYAN)
     remaining = max(0, round(SCAN_DURATION - elapsed))
-    print(f"  {spin}  {bar}  {remaining:>2}s left  ·  {len(active_wireless_network)} access point(s) found")
+
+    print(f"  {spin}  {bar}")
+    print(f"  {remaining:>2}s left  ·  {len(active_wireless_network)} access point(s) found")
     banner.info("press ctrl+c to stop early")
 
 
