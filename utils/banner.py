@@ -45,7 +45,9 @@ LOGO_LINES = [
 LOGO_GRADIENT = [C.NAVY, C.BLUE, C.SKY, C.CYAN, C.ICE, C.ICE]
 
 TAGLINE = "wireless deauthentication toolkit"
-COMPAT_NOTE = "linux only · built & tested on kali linux and parrot os"
+COMPAT_NOTE = "linux only · actively tested on kali linux, trial-and-error stage"
+GITHUB_LINK = "github.com/CodinWaffle"
+LINKEDIN_LINK = "linkedin.com/in/jose-martin-r-imperial-53a2b429a"
 
 # per-module sub-banners: same storm palette, distinct glyph + accent so the
 # screen is instantly recognizable as "not the main menu anymore"
@@ -95,6 +97,16 @@ def banner():
         print(f"{shade}{C.BOLD}{line.center(w)}{C.RESET}")
     print(f"{C.MUTED}{TAGLINE.center(w)}{C.RESET}")
     print(f"{C.DIM}{C.MUTED}{COMPAT_NOTE.center(w)}{C.RESET}")
+    print()
+    box(
+        [
+            f"{C.WHITE}{C.BOLD}GitHub  {C.RESET}{C.MUTED}»{C.RESET} {C.ICE}{GITHUB_LINK}{C.RESET}",
+            f"{C.WHITE}{C.BOLD}LinkedIn{C.RESET}{C.MUTED}»{C.RESET} {C.ICE}{LINKEDIN_LINK}{C.RESET}",
+        ],
+        title="connect",
+        accent=C.ACCENT,
+        w=w,
+    )
     print()
     hr()
 

@@ -56,9 +56,15 @@ def select_interface():
     banner.module_banner("wifi")
     banner.section("select a wireless interface", accent=banner.C.CYAN)
 
-    banner.warn("your adapter must support BOTH monitor mode and packet injection.")
-    banner.info("many built-in laptop wifi chips support monitor mode but not injection —")
-    banner.info("check with: aireplay-ng --test <interface>")
+    banner.box(
+        [
+            f"{banner.C.WARN}adapter must support BOTH monitor mode AND packet injection{banner.C.RESET}",
+            "many built-in laptop wifi chips support monitor mode but not injection.",
+            f"check with: {banner.C.WHITE}aireplay-ng --test <interface>{banner.C.RESET}",
+        ],
+        title="⚠ hardware requirement",
+        accent=banner.C.WARN,
+    )
 
     interfaces = detect_wireless_interfaces()
     if len(interfaces) == 0:
@@ -84,11 +90,6 @@ def select_interface():
 
 
 def find_monitor_interface(fallback):
-    # modern airmon-ng often does NOT rename the interface to "<iface>mon"
-    # anymore (that was the older mac80211 convention) — it may just flip
-    # the same interface into monitor mode in place. Re-query iwconfig for
-    # whichever interface actually reports Mode:Monitor instead of assuming
-    # a naming convention that may not hold on this kernel/driver.
     result = subprocess.run(["iwconfig"], capture_output=True, text=True)
     for block in result.stdout.split("\n\n"):
         block = block.strip()
@@ -137,11 +138,20 @@ def _render_scan_screen(elapsed, tick):
 
 def _render_results_screen():
     banner.module_banner("wifi")
-    banner.section("access points found", accent=banner.C.CYAN)
-    print(f"  {'no':<4}{'bssid':<20}{'ch':<6}{'essid'}")
-    print(f"  {'--':<4}{'-----':<20}{'--':<6}{'-----'}")
+
+    lines = [
+        f"{'no':<4}{'bssid':<20}{'ch':<5}{'speed':<9}{'essid'}",
+        f"{'--':<4}{'-----':<20}{'--':<5}{'-----':<9}{'-----'}",
+    ]
     for index, item in enumerate(active_wireless_network):
-        print(f"  {index:<4}{item['BSSID']:<20}{item['channel'].strip():<6}{item['ESSID']}")
+        speed = (item.get("Speed") or "").strip()
+        speed_display = f"{speed}Mb/s" if speed else "-"
+        lines.append(f"{index:<4}{item['BSSID']:<20}{item['channel'].strip():<5}{speed_display:<9}{item['ESSID']}")
+
+    if not active_wireless_network:
+        lines.append(f"{banner.C.MUTED}no access points found{banner.C.RESET}")
+
+    banner.box(lines, title="access points found", accent=banner.C.CYAN)
 
 
 def scan_networks(interface):

@@ -75,7 +75,6 @@ def scan_bluetooth_devices(interface, scan_length=16):
         raise
 
     output, _ = proc.communicate()
-    banner.ok("scan complete")
     return output
 
 
@@ -105,15 +104,23 @@ def scan_attack():
     del lines[0]
 
     array = []
-    print()
-    print(f"  {'id':<5}{'mac address':<22}{'device name'}")
-    print(f"  {'--':<5}{'-----------':<22}{'-----------'}")
+    box_lines = [
+        f"{'id':<5}{'mac address':<22}{'device name'}",
+        f"{'--':<5}{'-----------':<22}{'-----------'}",
+    ]
     for index, line in enumerate(lines, start=1):
         info = line.split()
         device_mac = info[0]
         device_name = " ".join(info[1:])
         array.append(device_mac)
-        print(f"  {index:<5}{device_mac:<22}{device_name}")
+        box_lines.append(f"{index:<5}{device_mac:<22}{device_name}")
+
+    if not array:
+        box_lines.append(f"{banner.C.MUTED}no devices found{banner.C.RESET}")
+
+    banner.module_banner("bluetooth")
+    banner.box(box_lines, title="devices found", accent=ACCENT)
+    banner.ok("scan complete")
 
     target_id = banner.prompt("target id or mac address", accent=ACCENT)
     try:
