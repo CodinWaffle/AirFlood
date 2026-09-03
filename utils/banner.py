@@ -152,6 +152,24 @@ def countdown(seconds, label="starting"):
     print(f"\r{C.OK}[*] go.{C.RESET}                        ")
 
 
+SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+
+def spinner_frame(tick, accent=None):
+    accent = accent or C.ACCENT
+    return f"{accent}{C.BOLD}{SPINNER_FRAMES[tick % len(SPINNER_FRAMES)]}{C.RESET}"
+
+
+def progress_bar(elapsed, total, bar_width=32, accent=None):
+    """Render a filled/empty block progress bar with a percentage, e.g. '████░░░░  42%'."""
+    accent = accent or C.ACCENT
+    ratio = min(1.0, max(0.0, elapsed / total)) if total > 0 else 1.0
+    filled = int(bar_width * ratio)
+    bar = "█" * filled + "░" * (bar_width - filled)
+    pct = int(ratio * 100)
+    return f"{accent}{bar}{C.RESET} {C.MUTED}{pct:3d}%{C.RESET}"
+
+
 if __name__ == "__main__":
     banner()
     section("main menu")

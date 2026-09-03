@@ -81,10 +81,19 @@ def prepare_monitor_mode(interface):
     time.sleep(1)
 
 
-def _render_scan_screen():
+SCAN_DURATION = 30  # seconds
+
+
+def _render_scan_screen(elapsed, tick):
     banner.module_banner("wifi")
     banner.section("scanning for access points", accent=banner.C.CYAN)
-    banner.info("press ctrl+c when you're ready to select a target\n")
+
+    spin = banner.spinner_frame(tick, accent=banner.C.CYAN)
+    bar = banner.progress_bar(elapsed, SCAN_DURATION, accent=banner.C.CYAN)
+    remaining = max(0, round(SCAN_DURATION - elapsed))
+    print(f"  {spin}  {bar}  {remaining:>2}s left  ·  {len(active_wireless_network)} found")
+    banner.info("press ctrl+c to stop early\n")
+
     print(f"  {'no':<4}{'bssid':<20}{'ch':<6}{'essid'}")
     print(f"  {'--':<4}{'-----':<20}{'--':<6}{'-----'}")
     for index, item in enumerate(active_wireless_network):
@@ -103,8 +112,13 @@ def scan_networks(interface):
         stderr=subprocess.DEVNULL,
     )
 
+    start = time.monotonic()
+    tick = 0
+
     try:
         while True:
+            elapsed = time.monotonic() - start
+
             for file in os.listdir():
                 if ".csv" in file:
                     with open(file) as csv_h:
@@ -116,20 +130,27 @@ def scan_networks(interface):
                             if check_for_essid(row["ESSID"], active_wireless_network):
                                 active_wireless_network.append(row)
 
-            _render_scan_screen()
+            _render_scan_screen(elapsed, tick)
+            tick += 1
 
-            if scan_proc.poll() is not None:
-                banner.warn("scan process stopped, showing final results")
+            if elapsed >= SCAN_DURATION:
                 break
 
-            time.sleep(1)
+            # sudo runs airodump-ng in its own pty, so a ctrl+c can stop that
+            # child on its own — if it's already gone, stop here too instead
+            # of waiting out the rest of the timer for nothing
+            if scan_proc.poll() is not None:
+                banner.warn("scan process stopped early, showing results so far")
+                break
+
+            time.sleep(0.4)
     except KeyboardInterrupt:
         pass
     finally:
         if scan_proc.poll() is None:
             scan_proc.terminate()
 
-    banner.ok(f"stopped scan, found {len(active_wireless_network)} network(s)")
+    banner.ok(f"scan complete, found {len(active_wireless_network)} network(s)")
 
 
 def select_target():

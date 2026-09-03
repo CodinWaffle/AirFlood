@@ -42,6 +42,39 @@ def get_bluetooth_interface():
     return interface
 
 
+def scan_bluetooth_devices(interface, scan_length=16):
+    """Run hcitool scan in the background while animating a spinner/progress bar
+    in the foreground — hcitool gives no live progress, so this is a
+    time-based animation rather than a real progress readout."""
+    approx_duration = scan_length * 1.28
+
+    proc = subprocess.Popen(
+        f"hcitool -i {interface} scan --length={scan_length}",
+        shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    )
+
+    start = time.monotonic()
+    tick = 0
+    try:
+        while proc.poll() is None:
+            elapsed = time.monotonic() - start
+            banner.module_banner("bluetooth")
+            banner.section("scanning for devices", accent=ACCENT)
+            spin = banner.spinner_frame(tick, accent=ACCENT)
+            bar = banner.progress_bar(elapsed, approx_duration, accent=ACCENT)
+            remaining = max(0, round(approx_duration - elapsed))
+            print(f"  {spin}  {bar}  ~{remaining:>2}s left")
+            tick += 1
+            time.sleep(0.3)
+    except KeyboardInterrupt:
+        proc.terminate()
+        raise
+
+    output, _ = proc.communicate()
+    banner.ok("scan complete")
+    return output
+
+
 def scan_attack():
     while True:
         banner.module_banner("bluetooth")
@@ -63,14 +96,7 @@ def scan_attack():
 
     # hcitool's inquiry length is in 1.28s units; the default (8 -> ~10s) often
     # isn't long enough to catch every nearby device, so give it more time
-    scan_length = 16  # ~20s
-    banner.module_banner("bluetooth")
-    banner.section("scanning for devices", accent=ACCENT)
-    banner.info(f"scanning for ~{round(scan_length * 1.28)}s, please wait...")
-    bluetooth_scan = subprocess.check_output(
-        f"hcitool -i {bluetooth_interface} scan --length={scan_length}",
-        shell=True, stderr=subprocess.STDOUT, text=True
-    )
+    bluetooth_scan = scan_bluetooth_devices(bluetooth_interface, scan_length=16)
     lines = bluetooth_scan.splitlines()
     del lines[0]
 
