@@ -12,9 +12,6 @@ active_wireless_network = []
 
 
 def check_for_essid(essid, lst):
-    # airodump-ng's CSV has an AP section followed by a station/client section with
-    # fewer columns — rows from that second section come back with ESSID as None.
-    # Treat those (and blank ESSIDs) as not a valid access point row.
     if not essid:
         return False
     if len(lst) == 0:
@@ -56,7 +53,7 @@ def select_interface():
         raise banner.BackToMenu()
 
     print()
-    for index, item in enumerate(interfaces):
+    for index, item in enumerate(interfaces, start=1):
         print(f"  {banner.C.CYAN}[{index}]{banner.C.RESET} {item}")
     print(f"  {banner.C.CYAN}[q]{banner.C.RESET} back to AirFlood menu")
 
@@ -65,7 +62,10 @@ def select_interface():
         if choice.lower() in ("q", "b"):
             raise banner.BackToMenu()
         try:
-            return interfaces[int(choice)]
+            index = int(choice) - 1
+            if index < 0:
+                raise IndexError
+            return interfaces[index]
         except (ValueError, IndexError):
             banner.warn("invalid selection, try again")
 
@@ -117,11 +117,17 @@ def scan_networks(interface):
                                 active_wireless_network.append(row)
 
             _render_scan_screen()
+
+            if scan_proc.poll() is not None:
+                banner.warn("scan process stopped, showing final results")
+                break
+
             time.sleep(1)
     except KeyboardInterrupt:
         pass
     finally:
-        scan_proc.terminate()
+        if scan_proc.poll() is None:
+            scan_proc.terminate()
 
     banner.ok(f"stopped scan, found {len(active_wireless_network)} network(s)")
 

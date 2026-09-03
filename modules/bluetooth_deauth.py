@@ -7,6 +7,28 @@ from utils import banner
 ACCENT = banner.MODULE_THEMES["bluetooth"]["accent"]
 
 
+def ensure_interface_up(interface):
+    status = subprocess.run(["hciconfig", interface], capture_output=True, text=True)
+    output = status.stdout + status.stderr
+
+    if status.returncode != 0 or "No such device" in output:
+        banner.error(f"bluetooth interface '{interface}' not found")
+        raise banner.BackToMenu()
+
+    if "UP RUNNING" in output:
+        return
+
+    banner.warn(f"{interface} is down, bringing it up...")
+    subprocess.run(["sudo", "hciconfig", interface, "up"])
+
+    status = subprocess.run(["hciconfig", interface], capture_output=True, text=True)
+    if "UP RUNNING" not in status.stdout:
+        banner.error(f"could not bring {interface} up — check the adapter and try again")
+        raise banner.BackToMenu()
+
+    banner.ok(f"{interface} is up")
+
+
 def get_bluetooth_interface():
     banner.module_banner("bluetooth")
     banner.section("select a bluetooth interface", accent=ACCENT)
@@ -15,7 +37,9 @@ def get_bluetooth_interface():
     )
     print()
     print(interfaces)
-    return banner.prompt("interface (e.g. hci0)", accent=ACCENT)
+    interface = banner.prompt("interface (e.g. hci0)", accent=ACCENT)
+    ensure_interface_up(interface)
+    return interface
 
 
 def scan_attack():
