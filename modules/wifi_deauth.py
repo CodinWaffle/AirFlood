@@ -1,6 +1,5 @@
 import subprocess
 import os
-import re
 import csv
 import time
 import shutil
@@ -38,9 +37,19 @@ def backup_stray_csv_files():
 
 
 def detect_wireless_interfaces():
-    wlan_pattern = re.compile("^wlan[0-9]")
-    result = subprocess.run(["iwconfig"], capture_output=True)
-    return wlan_pattern.findall(result.stdout.decode())
+    # parse iwconfig's actual per-interface blocks instead of assuming a
+    # "wlan0"-style name — udev-assigned names (e.g. wlx00c0ca8a1234 for USB
+    # adapters) and non-wireless interfaces listed before it (eth0, lo, ...)
+    # would otherwise cause a real adapter to go undetected
+    result = subprocess.run(["iwconfig"], capture_output=True, text=True)
+    interfaces = []
+    for block in result.stdout.split("\n\n"):
+        block = block.strip()
+        if not block or "no wireless extensions" in block:
+            continue
+        name = block.splitlines()[0].split()[0]
+        interfaces.append(name)
+    return interfaces
 
 
 def select_interface():

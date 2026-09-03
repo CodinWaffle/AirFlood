@@ -38,7 +38,7 @@ def main():
                 input("press enter to continue...")
                 continue
         except banner.BackToMenu:
-            continue
+            pass
 
         input(f"\n{banner.C.MUTED}press enter to return to the main menu...{banner.C.RESET}")
 
