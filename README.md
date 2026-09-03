@@ -42,9 +42,7 @@ Only point AirFlood at networks and devices you own, or have explicit written pe
 
 ## Where this is at
 
-I'm building and testing this one real run at a time on an actual Kali box, and it's not finished. Bugs get found and fixed as they come up — bad `airmon-ng` arguments, CSV parsing that choked on real `airodump-ng` output, terminal-width wrapping, that kind of thing. If something breaks on your end, that's the expected state right now, not something you did wrong — tell me what happened (module, step, what you expected vs. what you got, a screenshot if you can grab one) and it gets fixed.
-
-Don't rely on this for a real engagement yet.
+Built and tested on an actual Kali box, running against real hardware rather than just reading the code and hoping — a WiFi adapter (recommended, since built-in laptop WiFi usually lacks injection support) and Bluetooth over the laptop's built-in hardware or a Bluetooth adapter, either works. If you run into something unexpected, let me know — module, step, what you expected vs. what happened, a screenshot if you can grab one.
 
 **This only targets Kali Linux and Parrot OS.** Both are built specifically for pentesting — they ship `aircrack-ng` and `bluez` out of the box, come with wireless drivers patched for monitor mode and injection, and are what the WiFi and Bluetooth scripts are actually written and tested against (the exact `airmon-ng`/`airodump-ng`/`aireplay-ng` and `hciconfig`/`hcitool`/`l2ping` behavior they expect, plus an `apt`-based dependency installer). Other distros aren't a supported target — driver behavior, injection support, and even package availability can differ enough that things just won't work the same way.
 
@@ -59,7 +57,7 @@ Don't rely on this for a real engagement yet.
 - Kali Linux or Parrot OS, run as root — see [Where this is at](#where-this-is-at) for why
 - Python 3
 - A wireless adapter that supports **both** monitor mode and packet injection. A lot of built-in laptop chips do the first and not the second — check with `aireplay-ng --test <interface>` before you count on one. An external USB adapter with a known-compatible chipset (Atheros, Ralink) is the safer bet.
-- A Bluetooth adapter
+- A Bluetooth adapter — unlike WiFi, this one's easy: the built-in Bluetooth on most modern laptops works fine here, since `l2ping` flooding only needs standard HCI access through `bluez`, not monitor mode or injection support. It'll show up as `hci0`.
 - [`aircrack-ng`](https://www.aircrack-ng.org/) (`airmon-ng`, `airodump-ng`, `aireplay-ng`) and `bluez` (`hciconfig`, `hcitool`, `l2ping`) — AirFlood checks for both on startup and offers to install whatever's missing via `apt`.
 
 ## Running it
@@ -70,35 +68,8 @@ cd AirFlood
 sudo python3 main.py
 ```
 
-It has to run as root — monitor mode, interface control, and raw sockets all need it, and AirFlood checks for that up front instead of failing halfway through a scan later.
-
-Each module also runs standalone if you just want to poke at one:
-
-```bash
-sudo python3 modules/wifi_deauth.py
-sudo python3 modules/bluetooth_deauth.py
-```
-
-`Back` / `Exit` from anywhere returns you to the main menu rather than killing the process. `Ctrl+C` aborts whatever step is running.
-
-## Project layout
-
-```
-AirFlood/
-├── main.py                  # entry point: environment check, then main menu
-├── modules/
-│   ├── wifi_deauth.py       # interface -> monitor mode -> scan -> deauth
-│   └── bluetooth_deauth.py  # interface -> scan -> l2ping flood
-└── utils/
-    ├── banner.py             # theme: colors, boxes, banners, animations
-    └── dependencies.py       # platform / root / dependency checks
-```
-
 ## Author
 
 Jose Martin Imperial
-[github.com/CodinWaffle](https://github.com/CodinWaffle) · [LinkedIn](https://www.linkedin.com/in/jose-martin-r-imperial-53a2b429a/)
+[LinkedIn](https://www.linkedin.com/in/jose-martin-r-imperial-53a2b429a/)
 
----
-
-Found a bug? The module, the step, what you expected vs. what happened, and a screenshot if you have one — that's what actually gets it fixed.
