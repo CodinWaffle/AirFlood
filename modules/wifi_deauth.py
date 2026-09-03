@@ -91,9 +91,13 @@ def _render_scan_screen(elapsed, tick):
     spin = banner.spinner_frame(tick, accent=banner.C.CYAN)
     bar = banner.progress_bar(elapsed, SCAN_DURATION, accent=banner.C.CYAN)
     remaining = max(0, round(SCAN_DURATION - elapsed))
-    print(f"  {spin}  {bar}  {remaining:>2}s left  ·  {len(active_wireless_network)} found")
-    banner.info("press ctrl+c to stop early\n")
+    print(f"  {spin}  {bar}  {remaining:>2}s left  ·  {len(active_wireless_network)} access point(s) found")
+    banner.info("press ctrl+c to stop early")
 
+
+def _render_results_screen():
+    banner.module_banner("wifi")
+    banner.section("access points found", accent=banner.C.CYAN)
     print(f"  {'no':<4}{'bssid':<20}{'ch':<6}{'essid'}")
     print(f"  {'--':<4}{'-----':<20}{'--':<6}{'-----'}")
     for index, item in enumerate(active_wireless_network):
@@ -150,6 +154,7 @@ def scan_networks(interface):
         if scan_proc.poll() is None:
             scan_proc.terminate()
 
+    _render_results_screen()
     banner.ok(f"scan complete, found {len(active_wireless_network)} network(s)")
 
 

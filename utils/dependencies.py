@@ -2,6 +2,7 @@
 command-line tools (aircrack-ng suite + bluez utilities) are installed
 before the AirFlood menu loads."""
 
+import os
 import platform
 import shutil
 import subprocess
@@ -46,6 +47,18 @@ def check_platform():
         banner.warn(f"'{distro}' may still work if it's Debian-based, but isn't officially tested.")
 
 
+def check_root():
+    # os.geteuid() is POSIX-only — safe to call here since check_platform()
+    # already confirmed we're on Linux before this runs
+    if os.geteuid() != 0:
+        banner.error("AirFlood must be run as root.")
+        banner.info("it drives airmon-ng, airodump-ng, aireplay-ng, hciconfig, and l2ping directly,")
+        banner.info("all of which need raw device access.")
+        banner.info("run it again with: sudo python3 main.py")
+        raise SystemExit(1)
+    banner.ok("running as root")
+
+
 def missing_tools():
     return {tool: pkg for tool, pkg in REQUIRED_TOOLS.items() if shutil.which(tool) is None}
 
@@ -67,6 +80,7 @@ def ensure_dependencies():
     banner.section("environment check")
 
     check_platform()
+    check_root()
 
     missing = missing_tools()
     if not missing:
