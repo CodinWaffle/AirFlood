@@ -94,7 +94,7 @@ SCAN_DURATION = 30  # seconds
 
 
 def _render_scan_screen(elapsed, tick):
-    banner.module_banner("wifi", full_clear=(tick == 0))
+    banner.module_banner("wifi")
     banner.section("scanning for access points", accent=banner.C.CYAN)
 
     # the bar itself has to shrink on a narrow terminal, and the surrounding

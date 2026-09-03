@@ -81,12 +81,6 @@ def clear():
     print("\033[2J\033[3J\033[H", end="", flush=True)
 
 
-def redraw():
-    # lighter than clear(): skips the scrollback wipe (\033[3J), for frequent
-    # animation ticks where re-clearing scrollback every ~0.4s is wasted work
-    print("\033[2J\033[H", end="", flush=True)
-
-
 def hr(char="─", color=C.MUTED):
     print(f"{color}{char * width()}{C.RESET}")
 
@@ -102,13 +96,11 @@ def banner():
     hr()
 
 
-def module_banner(module, full_clear=True):
-    """Show the sub-banner for a specific module (wifi/bluetooth). Pass
-    full_clear=False for frequent animation redraws (spinner/progress bar
-    ticks) to skip the scrollback wipe every frame."""
+def module_banner(module):
+    """Clear the screen and show the sub-banner for a specific module (wifi/bluetooth)."""
     theme = MODULE_THEMES[module]
     accent = theme["accent"]
-    clear() if full_clear else redraw()
+    clear()
     w = width()
     print(f"{C.MUTED}{'AIRFLOOD'.center(w)}{C.RESET}")
     print(f"{accent}{C.BOLD}{theme['glyph_line'].center(w)}{C.RESET}")

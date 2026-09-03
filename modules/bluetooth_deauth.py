@@ -58,7 +58,7 @@ def scan_bluetooth_devices(interface, scan_length=16):
     try:
         while proc.poll() is None:
             elapsed = time.monotonic() - start
-            banner.module_banner("bluetooth", full_clear=(tick == 0))
+            banner.module_banner("bluetooth")
             banner.section("scanning for devices", accent=ACCENT)
             bar_width = max(10, min(32, banner.width() - 20))
             spin = banner.spinner_frame(tick, accent=ACCENT)
